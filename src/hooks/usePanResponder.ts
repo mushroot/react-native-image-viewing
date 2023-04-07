@@ -38,6 +38,7 @@ type Props = {
   initialTranslate: Position;
   onZoom: (isZoomed: boolean) => void;
   doubleTapToZoomEnabled: boolean;
+  onPress: () => void;
   onLongPress: () => void;
   delayLongPress: number;
 };
@@ -47,6 +48,7 @@ const usePanResponder = ({
   initialTranslate,
   onZoom,
   doubleTapToZoomEnabled,
+  onPress,
   onLongPress,
   delayLongPress,
 }: Props): Readonly<
@@ -61,6 +63,8 @@ const usePanResponder = ({
   let isDoubleTapPerformed = false;
   let lastTapTS: number | null = null;
   let longPressHandlerRef: number | null = null;
+  let timer: number | null = null;
+  let isTiggerLongPress: boolean = false;
 
   const meaningfulShift = MIN_DIMENSION * 0.01;
   const scaleValue = new Animated.Value(initialScale);
@@ -124,6 +128,10 @@ const usePanResponder = ({
     longPressHandlerRef && clearTimeout(longPressHandlerRef);
   };
 
+  const cancelOnPressHandle = () => {
+    timer && clearTimeout(timer);
+  }
+
   const handlers = {
     onGrant: (
       _: GestureResponderEvent,
@@ -133,7 +141,12 @@ const usePanResponder = ({
 
       if (gestureState.numberActiveTouches > 1) return;
 
-      longPressHandlerRef = setTimeout(onLongPress, delayLongPress);
+      isTiggerLongPress = false;
+      longPressHandlerRef = setTimeout(() => {
+        cancelOnPressHandle();
+        isTiggerLongPress = true;
+        onLongPress();
+      }, delayLongPress);
     },
     onStart: (
       event: GestureResponderEvent,
@@ -152,6 +165,8 @@ const usePanResponder = ({
       );
 
       if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
+        cancelOnPressHandle();
+
         const isScaled = currentTranslate.x !== initialTranslate.x; // currentScale !== initialScale;
         const { pageX: touchX, pageY: touchY } = event.nativeEvent.touches[0];
         const targetScale = SCALE_MAX;
@@ -209,11 +224,13 @@ const usePanResponder = ({
 
       if (Math.abs(dx) >= meaningfulShift || Math.abs(dy) >= meaningfulShift) {
         cancelLongPressHandle();
+        cancelOnPressHandle();
       }
 
       // Don't need to handle move because double tap in progress (was handled in onStart)
       if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
         cancelLongPressHandle();
+        cancelOnPressHandle();
         return;
       }
 
@@ -232,6 +249,7 @@ const usePanResponder = ({
 
       if (isPinchGesture) {
         cancelLongPressHandle();
+        cancelOnPressHandle();
 
         const initialDistance = getDistanceBetweenTouches(initialTouches);
         const currentDistance = getDistanceBetweenTouches(
@@ -329,6 +347,11 @@ const usePanResponder = ({
 
       if (isDoubleTapPerformed) {
         isDoubleTapPerformed = false;
+      } else if (!isTiggerLongPress) {
+        isTiggerLongPress = false
+        timer = setTimeout(()=>{
+          onPress();
+        }, DOUBLE_TAP_DELAY);
       }
 
       if (tmpScale > 0) {

@@ -2,7 +2,7 @@
 
 > React Native modal component for viewing images as a sliding gallery.
 
-[![npm version](https://badge.fury.io/js/react-native-image-viewing.svg)](https://badge.fury.io/js/react-native-image-viewing)
+[![npm version](https://badge.fury.io/js/@brandship%2Freact-native-image-viewing.svg)](https://badge.fury.io/js/@brandship%2Freact-native-image-viewing)
 [![styled with prettier](https://img.shields.io/badge/styled_with-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 
 - 🔥Pinch zoom for both iOS and Android
@@ -20,19 +20,19 @@ Try with Expo: https://expo.io/@antonkalinin/react-native-image-viewing
 ## Installation
 
 ```bash
-yarn add react-native-image-viewing
+yarn add @brandship/react-native-image-viewing
 ```
 
 or
 
 ```bash
-npm install --save react-native-image-viewing
+npm install --save @brandship/react-native-image-viewing
 ```
 
 ## Usage
 
 ```jsx
-import ImageView from "react-native-image-viewing";
+import ImageView from "@brandship/react-native-image-viewing";
 
 const images = [
   {
@@ -68,6 +68,7 @@ const [visible, setIsVisible] = useState(false);
 | `visible`                | Is modal shown or not                                                                               | boolean                                                     | true     |
 | `onRequestClose`         | Function called to close the modal                                                                  | function                                                    | true     |
 | `onImageIndexChange`     | Function called when image index has been changed                                                   | function                                                    | false    |
+| `onPress`                | Function called when image on pressed                                                               | function (event: GestureResponderEvent, image: ImageSource) | false    |
 | `onLongPress`            | Function called when image long pressed                                                             | function (event: GestureResponderEvent, image: ImageSource) | false    |
 | `delayLongPress`         | Delay in ms, before onLongPress is called: default `800`                                            | number                                                      | false    |
 | `animationType`          | Animation modal presented with: default `fade`                                                      | `none`, `fade`, `slide`                                     | false    |

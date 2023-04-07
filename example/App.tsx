@@ -54,6 +54,10 @@ export default function App() {
     Alert.alert("Long Pressed", image.uri);
   };
 
+  const onPress = (image) => {
+    Alert.alert("Once Pressed", image.uri);
+  };
+
   return (
     <SafeAreaView style={styles.root}>
       <ImageList
@@ -76,6 +80,7 @@ export default function App() {
         visible={isVisible}
         onRequestClose={onRequestClose}
         onLongPress={onLongPress}
+        onPress={onPress}
         HeaderComponent={
           images === travel
             ? ({ imageIndex }) => {

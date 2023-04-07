@@ -37,6 +37,7 @@ type Props = {
   imageSrc: ImageSource;
   onRequestClose: () => void;
   onZoom: (scaled: boolean) => void;
+  onPress: (imgae: ImageSource) => void;
   onLongPress: (image: ImageSource) => void;
   delayLongPress: number;
   swipeToCloseEnabled?: boolean;
@@ -47,16 +48,18 @@ const ImageItem = ({
   imageSrc,
   onZoom,
   onRequestClose,
+  onPress,
   onLongPress,
   delayLongPress,
   swipeToCloseEnabled = true,
   doubleTapToZoomEnabled = true,
 }: Props) => {
+
   const scrollViewRef = useRef<ScrollView>(null);
   const [loaded, setLoaded] = useState(false);
   const [scaled, setScaled] = useState(false);
   const imageDimensions = useImageDimensions(imageSrc);
-  const handleDoubleTap = useDoubleTapToZoom(scrollViewRef, scaled, SCREEN);
+  const handleDoubleTap = useDoubleTapToZoom(scrollViewRef, scaled, SCREEN, () => onPress && onPress(imageSrc));
 
   const [translate, scale] = getImageTransform(imageDimensions, SCREEN);
   const scrollValueY = new Animated.Value(0);
@@ -113,6 +116,13 @@ const ImageItem = ({
     [imageSrc, onLongPress]
   );
 
+  const onPressHandler = useCallback(
+    (event: any) => {
+      onPress(imageSrc);
+    },
+    [imageSrc, onPress]
+  );
+
   return (
     <View>
       <ScrollView
@@ -132,7 +142,7 @@ const ImageItem = ({
       >
         {(!loaded || !imageDimensions) && <ImageLoading />}
         <TouchableWithoutFeedback
-          onPress={doubleTapToZoomEnabled ? handleDoubleTap : undefined}
+          onPress={doubleTapToZoomEnabled ? handleDoubleTap : onPressHandler}
           onLongPress={onLongPressHandler}
           delayLongPress={delayLongPress}
         >
