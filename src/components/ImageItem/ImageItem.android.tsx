@@ -26,7 +26,7 @@ import { ImageSource } from "../../@types";
 import { ImageLoading } from "./ImageLoading";
 
 const SWIPE_CLOSE_OFFSET = 75;
-const SWIPE_CLOSE_VELOCITY = 1.75;
+const SWIPE_CLOSE_VELOCITY = 175;
 const SCREEN = Dimensions.get("window");
 const SCREEN_WIDTH = SCREEN.width;
 const SCREEN_HEIGHT = SCREEN.height;
@@ -80,8 +80,9 @@ const ImageItem = ({
   }, [imageSrc, onPress]);
 
   const [panHandlers, scaleValue, translateValue] = usePanResponder({
-    initialScale: scale || 1,
+    initialScale: 1,
     initialTranslate: translate || { x: 0, y: 0 },
+    imageDimensions,
     onZoom: onZoomPerformed,
     doubleTapToZoomEnabled,
     onPress: onPressHandler,
@@ -92,25 +93,23 @@ const ImageItem = ({
   const imagesStyles = getImageStyles(
     imageDimensions,
     translateValue,
-    scaleValue
+    scaleValue,
+    SCREEN
   );
+  const maxScrollHeight = Math.max(imagesStyles.height - SCREEN_HEIGHT, 0)
   const imageOpacity = scrollValueY.interpolate({
-    inputRange: [-SWIPE_CLOSE_OFFSET, 0, SWIPE_CLOSE_OFFSET],
-    outputRange: [0.7, 1, 0.7],
+    inputRange: [-SWIPE_CLOSE_OFFSET, 0, maxScrollHeight, maxScrollHeight + SWIPE_CLOSE_OFFSET],
+    outputRange: [0.7, 1, 1, 0.7],
   });
   const imageStylesWithOpacity = { ...imagesStyles, opacity: imageOpacity };
 
   const onScrollEndDrag = ({
     nativeEvent,
   }: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const velocityY = nativeEvent?.velocity?.y ?? 0;
+    // const velocityY = nativeEvent?.velocity?.y ?? 0;
     const offsetY = nativeEvent?.contentOffset?.y ?? 0;
 
-    if (
-      (Math.abs(velocityY) > SWIPE_CLOSE_VELOCITY &&
-        offsetY > SWIPE_CLOSE_OFFSET) ||
-      offsetY > SCREEN_HEIGHT / 2
-    ) {
+    if ( offsetY < -SWIPE_CLOSE_OFFSET) {
       onRequestClose();
     }
   };
@@ -127,12 +126,12 @@ const ImageItem = ({
     <ScrollView
       ref={imageContainer}
       style={styles.listItem}
-      pagingEnabled
+      pagingEnabled={false}
       nestedScrollEnabled
       showsHorizontalScrollIndicator={false}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.imageScrollContainer}
-      scrollEnabled={swipeToCloseEnabled}
+      // scrollEnabled={swipeToCloseEnabled}
       {...(swipeToCloseEnabled && {
         onScroll,
         onScrollEndDrag,
@@ -155,7 +154,7 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
   },
   imageScrollContainer: {
-    height: SCREEN_HEIGHT * 2,
+    minHeight: SCREEN_HEIGHT,
   },
 });
 

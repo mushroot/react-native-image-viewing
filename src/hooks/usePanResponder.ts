@@ -23,6 +23,7 @@ import {
   getImageTranslate,
   getImageDimensionsByTranslate,
 } from "../utils";
+import { Dimensions as ImageDimensions } from "../@types";
 
 const SCREEN = Dimensions.get("window");
 const SCREEN_WIDTH = SCREEN.width;
@@ -36,6 +37,7 @@ const OUT_BOUND_MULTIPLIER = 0.75;
 type Props = {
   initialScale: number;
   initialTranslate: Position;
+  imageDimensions: ImageDimensions | null,
   onZoom: (isZoomed: boolean) => void;
   doubleTapToZoomEnabled: boolean;
   onPress: () => void;
@@ -46,6 +48,7 @@ type Props = {
 const usePanResponder = ({
   initialScale,
   initialTranslate,
+  imageDimensions,
   onZoom,
   doubleTapToZoomEnabled,
   onPress,
@@ -63,22 +66,23 @@ const usePanResponder = ({
   let isDoubleTapPerformed = false;
   let lastTapTS: number | null = null;
   let longPressHandlerRef: number | null = null;
-  let timer: number | null = null;
+  let onePressHandlerRef: number | null = null;
   let isTiggerLongPress: boolean = false;
+  let isTiggerOnePress: boolean = false;
 
   const meaningfulShift = MIN_DIMENSION * 0.01;
   const scaleValue = new Animated.Value(initialScale);
   const translateValue = new Animated.ValueXY(initialTranslate);
 
-  const imageDimensions = getImageDimensionsByTranslate(
+  const _imageDimensions = imageDimensions || getImageDimensionsByTranslate(
     initialTranslate,
     SCREEN
   );
 
   const getBounds = (scale: number) => {
     const scaledImageDimensions = {
-      width: imageDimensions.width * scale,
-      height: imageDimensions.height * scale,
+      width: _imageDimensions.width * scale,
+      height: _imageDimensions.height * scale,
     };
     const translateDelta = getImageTranslate(scaledImageDimensions, SCREEN);
 
@@ -110,9 +114,9 @@ const usePanResponder = ({
   };
 
   const fitsScreenByWidth = () =>
-    imageDimensions.width * currentScale < SCREEN_WIDTH;
+    _imageDimensions.width * currentScale < SCREEN_WIDTH;
   const fitsScreenByHeight = () =>
-    imageDimensions.height * currentScale < SCREEN_HEIGHT;
+    _imageDimensions.height * currentScale < SCREEN_HEIGHT;
 
   useEffect(() => {
     scaleValue.addListener(({ value }) => {
@@ -129,7 +133,7 @@ const usePanResponder = ({
   };
 
   const cancelOnPressHandle = () => {
-    timer && clearTimeout(timer);
+    onePressHandlerRef && clearTimeout(onePressHandlerRef);
   }
 
   const handlers = {
@@ -145,6 +149,7 @@ const usePanResponder = ({
       longPressHandlerRef = setTimeout(() => {
         cancelOnPressHandle();
         isTiggerLongPress = true;
+        isTiggerOnePress = true;
         onLongPress();
       }, delayLongPress);
     },
@@ -155,7 +160,10 @@ const usePanResponder = ({
       initialTouches = event.nativeEvent.touches;
       numberInitialTouches = gestureState.numberActiveTouches;
 
-      if (gestureState.numberActiveTouches > 1) return;
+      if (gestureState.numberActiveTouches > 1) {
+        cancelOnPressHandle();
+        return;
+      }
 
       const tapTS = Date.now();
       // Handle double tap event by calculating diff between first and second taps timestamps
@@ -166,6 +174,7 @@ const usePanResponder = ({
 
       if (doubleTapToZoomEnabled && isDoubleTapPerformed) {
         cancelOnPressHandle();
+        isTiggerOnePress = true
 
         const isScaled = currentTranslate.x !== initialTranslate.x; // currentScale !== initialScale;
         const { pageX: touchX, pageY: touchY } = event.nativeEvent.touches[0];
@@ -248,6 +257,7 @@ const usePanResponder = ({
         numberInitialTouches === 2 && gestureState.numberActiveTouches === 2;
 
       if (isPinchGesture) {
+        isTiggerOnePress = true
         cancelLongPressHandle();
         cancelOnPressHandle();
 
@@ -296,6 +306,8 @@ const usePanResponder = ({
       }
 
       if (isTapGesture && currentScale > initialScale) {
+        cancelOnPressHandle();
+        isTiggerOnePress = true
         const { x, y } = currentTranslate;
         const { dx, dy } = gestureState;
         const [topBound, leftBound, bottomBound, rightBound] = getBounds(
@@ -347,11 +359,14 @@ const usePanResponder = ({
 
       if (isDoubleTapPerformed) {
         isDoubleTapPerformed = false;
-      } else if (!isTiggerLongPress) {
-        isTiggerLongPress = false
-        timer = setTimeout(()=>{
+      }
+
+      if (!isTiggerOnePress) {
+        onePressHandlerRef = setTimeout(()=>{
           onPress();
         }, DOUBLE_TAP_DELAY);
+      } else {
+        isTiggerOnePress = false
       }
 
       if (tmpScale > 0) {

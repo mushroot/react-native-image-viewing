@@ -23,7 +23,7 @@ import {
 import useDoubleTapToZoom from "../../hooks/useDoubleTapToZoom";
 import useImageDimensions from "../../hooks/useImageDimensions";
 
-import { getImageStyles, getImageTransform } from "../../utils";
+import { getImageStyles, getImageTransform, getInitImageSize } from "../../utils";
 import { ImageSource } from "../../@types";
 import { ImageLoading } from "./ImageLoading";
 
@@ -58,30 +58,34 @@ const ImageItem = ({
   const scrollViewRef = useRef<ScrollView>(null);
   const [loaded, setLoaded] = useState(false);
   const [scaled, setScaled] = useState(false);
-  const imageDimensions = useImageDimensions(imageSrc);
-  const handleDoubleTap = useDoubleTapToZoom(scrollViewRef, scaled, SCREEN, () => onPress && onPress(imageSrc));
+  const imageDimensions = getInitImageSize(useImageDimensions(imageSrc) || SCREEN, SCREEN);
 
+  const scaleValue = new Animated.Value(1);
   const [translate, scale] = getImageTransform(imageDimensions, SCREEN);
-  const scrollValueY = new Animated.Value(0);
-  const scaleValue = new Animated.Value(scale || 1);
-  const translateValue = new Animated.ValueXY(translate);
-  const maxScale = scale && scale > 0 ? Math.max(1 / scale, 1) : 1;
+  const handleDoubleTap = useDoubleTapToZoom(scrollViewRef, scaled, imageDimensions, translate || {x: 0, y: 0}, () => onPress && onPress(imageSrc));
 
-  const imageOpacity = scrollValueY.interpolate({
-    inputRange: [-SWIPE_CLOSE_OFFSET, 0, SWIPE_CLOSE_OFFSET],
-    outputRange: [0.5, 1, 0.5],
-  });
+  const scrollValueY = new Animated.Value(0);
+  const translateValue = new Animated.ValueXY(translate);
+  const maxScale = 2;
+
   const imagesStyles = getImageStyles(
     imageDimensions,
     translateValue,
-    scaleValue
+    scaleValue,
+    SCREEN
   );
+  const maxScrollHeight = Math.max(imagesStyles.height - SCREEN_HEIGHT, SCREEN_HEIGHT)
+  const imageOpacity = scrollValueY.interpolate({
+    inputRange: [-SWIPE_CLOSE_OFFSET, 0, maxScrollHeight, maxScrollHeight + SWIPE_CLOSE_OFFSET],
+    outputRange: [0.5, 1, 1, 0.5],
+  });
   const imageStylesWithOpacity = { ...imagesStyles, opacity: imageOpacity };
 
   const onScrollEndDrag = useCallback(
     ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const velocityY = nativeEvent?.velocity?.y ?? 0;
+      // const velocityY = nativeEvent?.velocity?.y ?? 0;
       const scaled = nativeEvent?.zoomScale > 1;
+      const offsetY = nativeEvent?.contentOffset?.y ?? 0;
 
       onZoom(scaled);
       setScaled(scaled);
@@ -89,7 +93,7 @@ const ImageItem = ({
       if (
         !scaled &&
         swipeToCloseEnabled &&
-        Math.abs(velocityY) > SWIPE_CLOSE_VELOCITY
+        offsetY < -SWIPE_CLOSE_VELOCITY
       ) {
         onRequestClose();
       }
@@ -163,7 +167,7 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
   },
   imageScrollContainer: {
-    height: SCREEN_HEIGHT,
+    minHeight: SCREEN_HEIGHT,
   },
 });
 

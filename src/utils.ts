@@ -49,6 +49,16 @@ export const splitArrayIntoBatches = (arr: any[], batchSize: number): any[] =>
     return result;
   }, []);
 
+export const getInitImageSize = (
+  image: Dimensions,
+  screen: Dimensions
+): Dimensions => {
+  const width = screen && screen.width < image.width ? screen.width : image.width;
+  const height = width / image.width * image.height;
+
+  return {width, height}
+}
+
 export const getImageTransform = (
   image: Dimensions | null,
   screen: Dimensions
@@ -59,7 +69,13 @@ export const getImageTransform = (
 
   const wScale = screen.width / image.width;
   const hScale = screen.height / image.height;
-  const scale = Math.min(wScale, hScale);
+  const maxScale = Math.max(wScale, hScale);
+  const scale = maxScale > 1 ? 1 : maxScale;
+
+  const width = screen && screen.width < image.width ? screen.width : image.width
+  const height = width / image.width * image.height
+  image.width = width
+  image.height = height
   const { x, y } = getImageTranslate(image, screen);
 
   return [{ x, y }, scale] as const;
@@ -68,7 +84,8 @@ export const getImageTransform = (
 export const getImageStyles = (
   image: Dimensions | null,
   translate: Animated.ValueXY,
-  scale?: Animated.Value
+  scale?: Animated.Value,
+  screen?: Dimensions
 ) => {
   if (!image?.width || !image?.height) {
     return { width: 0, height: 0 };
@@ -80,9 +97,12 @@ export const getImageStyles = (
     transform.push({ scale }, { perspective: new Animated.Value(1000) });
   }
 
+  const width = screen && screen.width < image.width ? screen.width : image.width
+  const height = width / image.width * image.height
+
   return {
-    width: image.width,
-    height: image.height,
+    width,
+    height,
     transform,
   };
 };
@@ -100,7 +120,7 @@ export const getImageTranslate = (
 
   return {
     x: getTranslateForAxis("x"),
-    y: getTranslateForAxis("y"),
+    y: Math.max(getTranslateForAxis("y"), 0),
   };
 };
 

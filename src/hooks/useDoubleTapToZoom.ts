@@ -13,7 +13,7 @@ import {
   NativeSyntheticEvent,
 } from "react-native";
 
-import { Dimensions, ImageSource } from "../@types";
+import { Dimensions, ImageSource, Position } from "../@types";
 
 const DOUBLE_TAP_DELAY = 300;
 let lastTapTS: number | null = null;
@@ -27,6 +27,7 @@ function useDoubleTapToZoom(
   scrollViewRef: React.RefObject<ScrollView>,
   scaled: boolean,
   screen: Dimensions,
+  translate: Position,
   onPress: () => void
 ) {
   const handleDoubleTap = useCallback(
@@ -50,7 +51,7 @@ function useDoubleTapToZoom(
           targetX = pageX / 2;
           targetY = pageY / 2;
           targetWidth = screen.width / 2;
-          targetHeight = screen.height / 2;
+          targetHeight = screen.height / 2 + translate.y / 2;
         }
 
         // @ts-ignore
@@ -68,7 +69,7 @@ function useDoubleTapToZoom(
         }, DOUBLE_TAP_DELAY);
       }
     },
-    [scaled]
+    [scaled, translate, screen]
   );
 
   return handleDoubleTap;
